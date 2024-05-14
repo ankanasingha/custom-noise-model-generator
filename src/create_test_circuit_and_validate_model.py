@@ -193,11 +193,9 @@ def create_test_circuit_and_validate_model():
     qc = create_test_circuit()
 
     transpiled_qc = transpile(qc, backend)
-    # Execute the transpiled circuits on the real quantum computer
     real_job_id = 'crx7nz77wv80008fkzxg'
     real_job = service.job(real_job_id)
 
-    # Collect the results
     real_results = real_job.result()
     real_counts = real_results.get_counts()
     print("Real Counts:", real_counts)
