@@ -1,2 +1,5 @@
 qiskit==1.0.1
 qiskit_ibm_runtime==0.20.0
+bayesian-optimization==1.4.3
+qiskit-aer==0.14.1
+matplotlib==3.8.4
