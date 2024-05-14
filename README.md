@@ -20,3 +20,8 @@ The custom noise model can be used to generate simulated datasets that reflect r
 - API Token from IBM Quantum Platform. This token needs to be injected as environment variable named  `IBM_TOKEN` during execution of the subsequent programs.
 
 ### Running the application
+
+- Get the API Token from Quantum Platform and set as environment variable `ÌBM_TOKEN`
+- Create Virtual Environment (`python -m venv venv`)
+- Activate Virtual Environment (`venv\Scripts\activate`)
+- `python program-to-execute.py`
