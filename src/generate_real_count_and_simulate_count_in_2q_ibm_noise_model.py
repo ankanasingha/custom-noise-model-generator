@@ -44,24 +44,18 @@ def generate_random_circuit():
     depth = 20
     ecr_probability = 0.80
 
-    # Generate the random circuits
     random_circuits = [create_random_circuits(selected_qubits, depth, ecr_probability) for _ in range(num_circuits)]
 
-    # Transpile the circuits for the backend
     transpiled_circuits = transpile(random_circuits, backend=backend, initial_layout=selected_qubits,
                                     optimization_level=0)
-    # Execute the transpiled circuits on the real quantum computer
     real_job = backend.run(transpiled_circuits, shots=8192)
 
-    # Collect the results
     real_results = real_job.result()
-
-    # Extract counts from the real device
     real_counts = [real_results.get_counts(i) for i in range(num_circuits)]
 
     noise_model = NoiseModel.from_backend(backend)
 
-    # Use the Aer simulator to run the simulation
+
     simulator = Aer.get_backend('qasm_simulator')
     transpiled_simulated_circuits = transpile(random_circuits, backend=backend, initial_layout=selected_qubits,
                                               optimization_level=3)
@@ -69,10 +63,8 @@ def generate_random_circuit():
                                     noise_model=noise_model,
                                     shots=8192)
 
-    # Get the results from the job
     simulated_results = simulated_job.result()
 
-    # Extract the counts
     simulated_counts = [simulated_results.get_counts(i) for i in range(num_circuits)]
     print('Real Counts:',real_counts)
     print('Simulated Counts Using IBM noise Model:',simulated_counts)
