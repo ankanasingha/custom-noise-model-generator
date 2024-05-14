@@ -9,12 +9,10 @@ from qiskit_aer import Aer
 from pyswarms.single.global_best import GlobalBestPSO
 from qiskit_aer.noise import (
     NoiseModel,
-    QuantumError,
     ReadoutError,
     depolarizing_error,
     pauli_error,
-    thermal_relaxation_error,
-    errors
+    thermal_relaxation_error
 )
 
 np.random.seed(42)
@@ -185,10 +183,8 @@ if __name__ == "__main__":
     depth = 20
     ecr_probability = 0.8
 
-    # Generate the random circuits
     random_circuits = [create_random_circuits(selected_qubits, depth, ecr_probability) for _ in range(num_circuits)]
 
-    # Transpile the circuits for the backend
     transpiled_circuits = transpile(random_circuits,
                                     backend=backend,
                                     initial_layout=selected_qubits,
@@ -227,7 +223,6 @@ if __name__ == "__main__":
 
     final_avg_tvd, pos = optimizer.optimize(objective_function, iters=800)
 
-    # Output and Plotting
     print("Optimal parameters found:", pos)
     print("Minimum TVD achieved:", final_avg_tvd)
     plt.figure(figsize=(10, 6))
