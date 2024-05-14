@@ -105,27 +105,21 @@ def calculate_tvd_for_ibm_noise_model(transpiled_qc, backend, real_counts):
     ibm_simulated_counts = ibm_simulated_results.get_counts()
     print("IBM simulated Counts:", ibm_simulated_counts)
     ibm_tvd_value = calculate_tvd(ibm_simulated_counts, real_counts)
-    # Print TVD values using IBM's Noise Model||
     print("Calculated TVD for IBM's Noise Model:", ibm_tvd_value)
 
 
 def create_test_circuit():
     qc = QuantumCircuit(4)
-    # Apply ECR gates predominantly
-    ecr_cycles = 4  # Number of cycles of ECR gates through the chosen pairs to reach approximately 16
+    ecr_cycles = 4
     for _ in range(ecr_cycles):
-        # ECR gates between chosen pairs for structured connectivity
         qc.ecr(0, 1)
         qc.ecr(1, 2)
         qc.ecr(2, 3)
         qc.ecr(3, 0)
-    # Add SX and RZ gates to use up the remaining depth
-    # Distribute 4 SX and 4 RZ gates evenly
     for i in range(4):
-        qc.sx(i)  # Apply SX gate on each qubit
-        qc.rz(np.pi / 4, i)  # Apply RZ gate with pi/4 phase on each qubit
+        qc.sx(i)
+        qc.rz(np.pi / 4, i)
     qc.measure_all()
-    # Draw the circuit
     print(qc.draw())
     return qc
 
