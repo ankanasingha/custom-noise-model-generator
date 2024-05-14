@@ -9,12 +9,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from qiskit_aer.noise import (
     NoiseModel,
-    QuantumError,
     ReadoutError,
     depolarizing_error,
     pauli_error,
-    thermal_relaxation_error,
-    errors
+    thermal_relaxation_error
 )
 
 np.random.seed(42)
