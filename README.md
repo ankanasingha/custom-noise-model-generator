@@ -1,4 +1,4 @@
-# quantum-noise-simulation
+# custom-noise-model-generator
 
 ## Introduction
 This project creates a custom noise model using different optimisation technique.
