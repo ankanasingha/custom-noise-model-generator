@@ -39,18 +39,14 @@ def calculate_tvd(real_count, simulated_count):
 def calculate_tvd_between_real_and_simulated_count_in_2q():
     avg_tvd_by_iteration = calculate_average_tvd()
 
-    # Labels for each set
     labels = ['Set 1', 'Set 2', 'Set 3', 'Set 4', 'Set 5']
 
-    # Plotting the bar graph
     plt.bar(labels, avg_tvd_by_iteration, color='darkgoldenrod')
 
-    # Adding title and labels
     plt.title('Average TVD Values for 5 Sets of Circuits (2q)')
     plt.xlabel('Set')
     plt.ylabel('Average TVD Value')
 
-    # Displaying the plot
     plt.show()
 
 
