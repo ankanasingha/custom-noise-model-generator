@@ -25,7 +25,6 @@ def compare_real_and_simulated_counts_in_2q_ibm_noise_model():
     ax.bar([x + 0.3 for x in range(len(simulated_strings))], simulated_values, color='navy', alpha=0.7,
            label='Simulated Counts')
 
-    # Set ticks and labels
     ax.set_xticks(range(len(real_strings)))
     ax.set_xticklabels(real_strings)
     ax.set_xlabel('Bit Strings')
@@ -33,7 +32,6 @@ def compare_real_and_simulated_counts_in_2q_ibm_noise_model():
     ax.set_title('Comparison of Real and Simulated Counts')
     ax.legend()
 
-    # Show plot
     plt.tight_layout()
     plt.show()
 
