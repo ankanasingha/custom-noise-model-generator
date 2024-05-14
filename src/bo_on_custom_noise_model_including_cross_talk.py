@@ -44,7 +44,6 @@ def create_noise_model(ecr_error_rates, qubit_noise_params, selected_qubits):
     noise_model = NoiseModel()
 
     for i in selected_qubits:
-        # Preparation errors
         prep_errors = pauli_error(
             [('X', qubit_noise_params[i]['prob_meas1_prep0']), ('I', 1 - qubit_noise_params[i]['prob_meas1_prep0'])])
         noise_model.add_quantum_error(prep_errors, 'reset', [i])
@@ -52,6 +51,13 @@ def create_noise_model(ecr_error_rates, qubit_noise_params, selected_qubits):
     for qubit, params in qubit_noise_params.items():
         sx_error = pauli_error([('X', params['sx_error_rate']), ('I', 1 - params['sx_error_rate'])])
         noise_model.add_quantum_error(sx_error, 'sx', [qubit])
+
+        # Adding correlated SX dephasing errors to neighboring qubits
+        for other_qubit in qubit_noise_params:
+            if other_qubit != qubit and abs(other_qubit - qubit) == 1:  # Check if qubits are neighbors
+                crosstalk_phase_error = pauli_error(
+                    [('Z', params['crosstalk_phase_probability']), ('I', 1 - params['crosstalk_phase_probability'])])
+                noise_model.add_quantum_error(crosstalk_phase_error, 'sx', [other_qubit])
 
     for pair, error_rate in ecr_error_rates.items():
         qubits = [int(q) for q in pair.split('_')]
@@ -61,18 +67,37 @@ def create_noise_model(ecr_error_rates, qubit_noise_params, selected_qubits):
         ecr_error = depolarizing_error(error_rate, 2)
         noise_model.add_quantum_error(ecr_error, 'ecr', qubits)
 
+        prob_control = qubit_noise_params[control]['crosstalk_probability']
+        prob_target = qubit_noise_params[target]['crosstalk_probability']
+
+        # Calculate probabilities for 'IZ' and 'ZI'
+        prob_IZ = prob_control * (1 - prob_target)
+        prob_ZI = prob_target * (1 - prob_control)
+
+        # Calculate 'II' probability to ensure total is exactly 1
+        prob_II = 1 - prob_IZ - prob_ZI
+
+        # Define crosstalk errors with corrected probabilities
+        crosstalk_error = pauli_error([
+            ('IZ', prob_IZ),
+            ('ZI', prob_ZI),
+            ('II', prob_II)
+        ])
+        noise_model.add_quantum_error(crosstalk_error, 'ecr', qubits)
+
     # Thermal relaxation and measurement errors
     for qubit, params in qubit_noise_params.items():
         t1 = params['t1']
         t2 = params['t2']
-    # Correct T_2 if it exceeds 2 * T_1
-    if t2 > 2 * t1:
-        t2 = 2 * t1
-        qubit_noise_params[qubit]['t2'] = t2
 
-        thermal_error = thermal_relaxation_error(qubit_noise_params[qubit]['t1'], qubit_noise_params[qubit]['t2'],
-                                                 660e-9)  # using 660ns as gate time
-        noise_model.add_quantum_error(thermal_error, 'measure', [qubit])  # Apply to measurement
+        # Correct T_2 if it exceeds 2 * T_1
+        if t2 > 2 * t1:
+            t2 = 2 * t1
+            qubit_noise_params[qubit]['t2'] = t2
+
+            thermal_error = thermal_relaxation_error(qubit_noise_params[qubit]['t1'], qubit_noise_params[qubit]['t2'],
+                                                     660e-9)  # using 660ns as gate time
+            noise_model.add_quantum_error(thermal_error, 'measure', [qubit])  # Apply to measurement
 
     for i in selected_qubits:
         readout_error = ReadoutError(
@@ -94,16 +119,20 @@ def objective_function(selected_qubits, transpiled_circuits, prob_meas1_prep0_q0
                        prob_meas1_prep0_q2, prob_meas0_prep1_q2, sx_error_rate_q2,
                        prob_meas1_prep0_q3, prob_meas0_prep1_q3, sx_error_rate_q3,
                        ecr_error_rate_1_0, ecr_error_rate_2_3, ecr_error_rate_2_1, t1_q0, t2_q0, t1_q1, t2_q1, t1_q2,
-                       t2_q2, t1_q3, t2_q3):
+                       t2_q2, t1_q3, t2_q3, crosstalk_probability, crosstalk_phase_probability):
     qubit_noise_params = {
         0: {'prob_meas1_prep0': prob_meas1_prep0_q0, 'prob_meas0_prep1': prob_meas0_prep1_q0,
-            'sx_error_rate': sx_error_rate_q0, 't1': t1_q0, 't2': t2_q0},
+            'sx_error_rate': sx_error_rate_q0, 't1': t1_q0, 't2': t2_q0, 'crosstalk_probability': crosstalk_probability,
+            'crosstalk_phase_probability': crosstalk_phase_probability},
         1: {'prob_meas1_prep0': prob_meas1_prep0_q1, 'prob_meas0_prep1': prob_meas0_prep1_q1,
-            'sx_error_rate': sx_error_rate_q1, 't1': t1_q1, 't2': t2_q1},
+            'sx_error_rate': sx_error_rate_q1, 't1': t1_q1, 't2': t2_q1, 'crosstalk_probability': crosstalk_probability,
+            'crosstalk_phase_probability': crosstalk_phase_probability},
         2: {'prob_meas1_prep0': prob_meas1_prep0_q2, 'prob_meas0_prep1': prob_meas0_prep1_q2,
-            'sx_error_rate': sx_error_rate_q2, 't1': t1_q2, 't2': t2_q2},
+            'sx_error_rate': sx_error_rate_q2, 't1': t1_q2, 't2': t2_q2, 'crosstalk_probability': crosstalk_probability,
+            'crosstalk_phase_probability': crosstalk_phase_probability},
         3: {'prob_meas1_prep0': prob_meas1_prep0_q3, 'prob_meas0_prep1': prob_meas0_prep1_q3,
-            'sx_error_rate': sx_error_rate_q3, 't1': t1_q3, 't2': t2_q3}
+            'sx_error_rate': sx_error_rate_q3, 't1': t1_q3, 't2': t2_q3, 'crosstalk_probability': crosstalk_probability,
+            'crosstalk_phase_probability': crosstalk_phase_probability}
     }
     ecr_error_rates = {
         '1_0': ecr_error_rate_1_0,
@@ -121,6 +150,7 @@ def objective_function(selected_qubits, transpiled_circuits, prob_meas1_prep0_q0
 
         simulated_results = simulated_job.result()
         simulated_counts = [simulated_results.get_counts(j) for j in range(100)]
+
         real_counts_file_path = os.path.join(os.path.dirname(os.getcwd()), "resources", "4q", "real_counts",
                                              f"real_counts_{i}.json")
         with open(real_counts_file_path, 'r') as file:
@@ -164,7 +194,9 @@ def get_bounds():
             't1_q2': (5e-5, 0.001),
             't2_q2': (5e-5, 0.001),
             't1_q3': (5e-5, 0.001),
-            't2_q3': (5e-5, 0.001)}
+            't2_q3': (5e-5, 0.001),
+            'crosstalk_probability': (1e-6, 1e-2),
+            'crosstalk_phase_probability': (1e-6, 1e-2)}
 
 
 def get_initial_points():
@@ -184,6 +216,8 @@ def get_initial_points():
          'ecr_error_rate_1_0': 0.0026819267621233656,
          'ecr_error_rate_2_1': 0.007879566556619033,
          'ecr_error_rate_2_3': 0.010100577411422645,
+         'crosstalk_probability': 1e-3,
+         'crosstalk_phase_probability': 1e-3,
          't1_q0': 417.416300388374e-6,
          't2_q0': 319.937439214404e-6,
          't1_q1': 229.758984017216e-6,
@@ -207,6 +241,8 @@ def get_initial_points():
          'ecr_error_rate_1_0': 0.013708445791213136,
          'ecr_error_rate_2_1': 0.006833842370249338,
          'ecr_error_rate_2_3': 0.006221838459653989,
+         'crosstalk_probability': 1e-3,
+         'crosstalk_phase_probability': 1e-3,
          't1_q0': 289.14421906981e-6,
          't2_q0': 333.030833327208e-6,
          't1_q1': 123.376592714118e-6,
@@ -230,6 +266,8 @@ def get_initial_points():
          'ecr_error_rate_1_0': 0.0026819267621233656,
          'ecr_error_rate_2_1': 0.007879566556619033,
          'ecr_error_rate_2_3': 0.010100577411422645,
+         'crosstalk_probability': 1e-3,
+         'crosstalk_phase_probability': 1e-3,
          't1_q0': 256.937193770543e-6,
          't2_q0': 117.468669961055e-6,
          't1_q1': 279.088765247172e-6,
@@ -241,7 +279,7 @@ def get_initial_points():
     ]
 
 
-def perform_bo_on_custom_noise_model_excluding_cross_talk():
+def perform_bo_on_custom_noise_model_including_cross_talk():
     backend = login_to_ibm_quantum()
     selected_qubits = [0, 1, 2, 3]
     num_circuits = 100
@@ -282,6 +320,8 @@ def perform_bo_on_custom_noise_model_excluding_cross_talk():
         'sx_error_rate': {i: optimal_params[f'sx_error_rate_q{i}'] for i in range(4)},
         't1': {i: optimal_params[f't1_q{i}'] for i in range(4)},
         't2': {i: optimal_params[f't2_q{i}'] for i in range(4)},
+        'crosstalk_probability': optimal_params['crosstalk_probability'],
+        'crosstalk_phase_probability': optimal_params['crosstalk_phase_probability'],
         'ecr_error_rate': {
             '1_0': optimal_params['ecr_error_rate_1_0'],
             '2_1': optimal_params['ecr_error_rate_2_1'],
@@ -294,6 +334,8 @@ def perform_bo_on_custom_noise_model_excluding_cross_talk():
     print(f"Optimal single-qubit gate error rates: {optimal_values['sx_error_rate']}")
     print(f"Optimal T1 relaxation times: {optimal_values['t1']}")
     print(f"Optimal T2 relaxation times: {optimal_values['t2']}")
+    print(f"Optimal crosstalk_probability: {optimal_values['crosstalk_probability']}")
+    print(f"Optimal crosstalk_phase_probability: {optimal_values['crosstalk_phase_probability']}")
     print(f"Optimal ECR error rates: {optimal_values['ecr_error_rate']}")
 
     optimal_tvd = -optimizer.max['target']
@@ -309,4 +351,4 @@ def perform_bo_on_custom_noise_model_excluding_cross_talk():
 
 
 if __name__ == "__main__":
-    perform_bo_on_custom_noise_model_excluding_cross_talk()
+    perform_bo_on_custom_noise_model_including_cross_talk()
