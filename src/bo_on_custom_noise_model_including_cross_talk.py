@@ -286,10 +286,8 @@ def perform_bo_on_custom_noise_model_including_cross_talk():
     depth = 20
     ecr_probability = 0.8
 
-    # Generate the random circuits
     random_circuits = [create_random_circuits(selected_qubits, depth, ecr_probability) for _ in range(num_circuits)]
 
-    # Transpile the circuits for the backend
     transpiled_circuits = transpile(random_circuits,
                                     backend=backend,
                                     initial_layout=selected_qubits,
@@ -299,21 +297,17 @@ def perform_bo_on_custom_noise_model_including_cross_talk():
     initial_points = get_initial_points()
     optimizer = BayesianOptimization(f=objective_function, pbounds=bounds, random_state=2)
 
-    # Registering manually specified points
     for point in initial_points:
         result = objective_function(selected_qubits, transpiled_circuits, **point)
         optimizer.register(params=point, target=result)
 
-    # Perform optimization
     optimizer.maximize(
-        init_points=0,  # No additional random initial points
+        init_points=0,
         n_iter=800
     )
 
-    # Extract the optimal parameters
     optimal_params = optimizer.max['params']
 
-    # Create a dictionary to hold the optimal values for easier access
     optimal_values = {
         'prob_meas1_prep0': {i: optimal_params[f'prob_meas1_prep0_q{i}'] for i in range(4)},
         'prob_meas0_prep1': {i: optimal_params[f'prob_meas0_prep1_q{i}'] for i in range(4)},
