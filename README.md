@@ -25,3 +25,7 @@ The custom noise model can be used to generate simulated datasets that reflect r
 - Create Virtual Environment (`python -m venv venv`)
 - Activate Virtual Environment (`venv\Scripts\activate`)
 - `python program-to-execute.py`
+
+### Note:
+
+- Execute the random circuits multiple times using the same random seed and take the average of TVDs across all the sets while counting the final average TVD.
